@@ -1,6 +1,3 @@
-<!-- Adaptacion del entorno y guia creada por Daniel López Escobar.
-     Cualquier duda no dude en contactar. Correo email: dalope17@ucm.es -->
-
 # Usar TensorFlow Lite for Microcontrollers
 
 Para poder incluir TensorFlow Lite for Microcontrollers (TFLM) en el entorno de PlatformIO es necesario descargarlo y exportarlo como una librería.
