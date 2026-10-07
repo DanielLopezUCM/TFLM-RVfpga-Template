@@ -1,0 +1,17 @@
+{
+    "name": "tflm-local",
+    "version": "0.1.0",
+    "build": {
+        "includeDir": ".",
+        "srcDir": ".",
+        "srcFilter": [
+            "+<tensorflow/lite/core/**>",
+            "+<tensorflow/lite/kernels/**>",
+            "+<tensorflow/lite/micro/**>",
+
+            "-<**/*test*>",
+            "-<tensorflow/lite/micro/examples/**>",
+            "-<tensorflow/lite/micro/tools/**>"
+        ]
+    }
+}

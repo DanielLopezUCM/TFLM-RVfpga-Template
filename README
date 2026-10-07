@@ -1,0 +1,123 @@
+<!-- Adaptacion del entorno y guia creada por Daniel López Escobar.
+     Cualquier duda no dude en contactar. Correo email: dalope17@ucm.es -->
+
+# Usar TensorFlow Lite for Microcontrollers
+
+Para poder incluir TensorFlow Lite for Microcontrollers (TFLM) en el entorno de PlatformIO es necesario descargarlo y exportarlo como una librería.
+
+## Descargarse y preparar la libreria TFLM
+
+Lo primero sería descargarse la libreria.
+
+``` bash
+git clone https://github.com/tensorflow/tflite-micro.git
+```
+
+Y segundo sería preparar la libreria para usarla en nuestro entorno. Y ponerlo en el `src/` del proyecto, puesto que al tener dependencias internas no es posible ponerlo el `lib/` lo que sería mucho más limpio.
+
+```bash
+cd tflite-micro
+python3 tensorflow/lite/micro/tools/project_generation/create_tflm_tree.py [/tu/ruta/de/destino] # La ruta tiene que ser el src/ del proyecto donde lo quieras usar
+```
+
+## Crear el proyecto y prepararlo
+
+Ahora que ya tenemos la libreria de TFLM preparada es necesario crear un proyecto de PlatformIO. Lo mejor es copiar uno y asi no hay que partir de cero. Un ejemplo puede ser `[ruta de RVfpgaSoC]/Labs/LabResources/Lab2/examples/Blincky`.
+
+Teniendo ya el proyecto es necesario meter la libreria de TFLM que hemos obtenido anteriormente en la carpeta `src/` del proyecto. Así como el nuestro código de TFLM en la carpeta `src/` y sus headers en la carpeta `include/`. El código TFLM es el `main.cc`/`main.cpp` que se encarga de la inferencia así como el `model_data.cc` que contiene los datos del modelo. Los headers son los ficheros `*.h` usados.
+
+### Preparar el script Python para incluir librerias para el post-enlazado
+
+Para que incluya las librerias necesarias del sistema necesarias para TFLM y que no se incluyen por defecto en PlatformIO. Para ello hay que crear la carpeta `scripts/` y crear el script a ejecutar al compilar. Para ello desde la carpeta raiz del proyecto hacer lo siguiente:
+
+```bash
+mkdir scripts
+```
+
+Y crear un archivo llamado `tflm_link.py` en esta carpeta que contega el siguiente código:
+
+```python
+Import("env")
+
+env.Append(
+    LIBS=[
+        "m",
+    ]
+)
+```
+
+Para que se ejecute este script posteriormente modificaremos el archivo `platformio.ini`.
+
+### Modificar `platformio.ini` para compilar correctamente
+
+El archivo `platformio.ini` deberia quedar de una forma similar a la siguiente. Más adelante entraremos en detalle de cada una de las partes del fichero modificadas.
+
+``` platformio
+[env:swervolf_nexys]
+platform = chipsalliance
+board = swervolf_nexys
+framework = wd-riscv-sdk
+
+monitor_speed = 115200
+
+#debug_tool = whisper
+
+build_flags =
+    -std=gnu++17
+    -O3
+    -ffunction-sections
+    -fdata-sections
+
+    -fno-exceptions
+    -fno-rtti
+    -fno-threadsafe-statics
+
+    -Wl,--gc-sections
+    -Wl,-Map=.pio/build/swervolf_nexys/firmware.map
+
+    ; definicion para que tensorflow use memoria estatica
+    -D TF_LITE_USE_GLOBAL_CMATH_FUNCTIONS
+    -D TF_LITE_USE_GLOBAL_CMATH_FUNCTIONS
+    -D TF_LITE_USE_GLOBAL_MAX
+    -D TF_LITE_USE_GLOBAL_MIN
+
+    ; includes de TensorFlow Lite Micro
+    -I src/tflm
+    -I src/tflm/third_party/flatbuffers/include
+    -I src/tflm/third_party/gemmlowp
+    -I src/tflm/third_party/ruy
+    -I src/tflm/third_party/kissfft
+
+
+board_build.bitstream_file = home/RVfpgaSoC/Labs/LabProjects/Lab1/project_1.runs/impl_1/rvfpga.bit
+
+board_debug.verilator.binary = home/RvfpgaSoC/BlockDesign/verilatorSIM/Vrvfpgasim.exe
+
+extra_scripts =
+    post:scripts/tflm_link.py
+```
+
+Las secciones cambiadas son `build_flags` y `extra_scripts`. En cuanto a la segunda es la forma encargada de ejecutar el script para incluir la libreria. En cuanto a `build_flahs` le indica da las flags necesarias. Estas se dividen en diversas partes.
+
+Por un lado tenemos las banderas del compilador, encargadas de optimizar el código generado para que tenga menor huella en memoria `-O3` y decirle al compilador que use una version del gnu compatible con TFLM (gnu++ 17), así como indicarle el mapeo del firmware, entre otras cosas.
+
+Además tambien le indica las carpetas donde se encuentran las librerias necesarias para la compilacion, tanto la de TFLM como sus dependencias.
+
+Finalmente, define constantes para modificar la librería de TFLM para no usar comparadores y operadoress genéricos sino unos globales (`TF_LITE_USE_GLOBAL_CMATH_FUNCTIONS`, `TF_LITE_USE_GLOBAL_MAX` y `TF_LITE_USE_GLOBAL_MIN`), así como hacer uso de memoria estatica y no dinamica con `TF_LITE_USE_GLOBAL_CMATH_FUNCTIONS` (esencial para bare-metal).
+
+### Crear llamadas al sistema
+
+Finalmente el ultimo componente a modificar es incluir en la carpeta `src/` un archivo llamado `baremetal_syscalls.c` que defina las llamadas al sistema, ya que son necesarias para compilar, mientras que no deberían de ser llamadas en ningun momento, por ello estas funciones darán fallo.
+
+### Compilar y ejecutar el proyecto
+
+Para ejecutar el proyecto sobre placa hace falta compilar el proyecto, para ello se pude tanto hacer mediante consola como a traves del plugin de PlatformIO. Mediante el plugin seria dandole a `Build` que estaria en `Project Tasks > swervolf_nexys > General > Build`. Mientras que con consola al abrir una consola de PlatformIO seria con el comando `pio run`.
+
+Para cargar sobre la placa primero necesitariamos subir el bitstream. Para ello mediante el plugin seria `Project Tasks > swervolf_nexys > Platform > Upload Bitstream` y con consola seria `pio run -t upload_bitstream` (Revisar comando, habria que confirmar).
+
+Finalmente ya mandamos el codigo a la placa para su ejecucion. Para ello mediante el plugin seria `Project Tasks > swervolf_nexys > General > Upload` y con consola seria `pio run -t upload`.
+
+#### Cosas a tener en cuenta
+
+Si escribimos mediante UART es necesario abrir un monitor para que lea el puerto de la UART. Si usamos `Upload and Monitor`, un problema que puede surgir es que la placa escriba antes de que se nos abra el monitor, para ello igual conviene postponer la escritura a traves de la UART para dar tiempo a engancharse el monitor.
+
