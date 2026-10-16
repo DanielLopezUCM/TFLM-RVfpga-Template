@@ -1,2 +1,5 @@
-.pio
-.vscode
+.pio/
+build/
+.vscode/
+mnist_riscv_test.elf
+*.o
