@@ -3,7 +3,7 @@
 Este ejemplo ejecuta una inferencia de clasificación de dígitos MNIST con TensorFlow Lite Micro (TFLM) en un procesador VeeR EH1. El mismo programa se puede compilar y ejecutar en dos entornos:
 
 1. **Simulación** en el testbench bare-metal de [Cores-VeeR-EH1](https://github.com/chipsalliance/Cores-VeeR-EH1), usando Verilator.
-2. **Placa** VeeRwolf EH1 en una Nexys A7, usando PlatformIO y el framework `wd-riscv-sdk`. Usando el SoC[VeeRwolf](https://github.com/chipsalliance/VeeRwolf)
+2. **Placa** VeeRwolf EH1 en una Nexys A7, usando PlatformIO y el framework `wd-riscv-sdk`. Usando el SoC [VeeRwolf](https://github.com/chipsalliance/VeeRwolf)
 
 Ambos entornos comparten tanto el modelo y la imagen de entrada, como el código encargado de la inferencia. Se diferencian en el arranque, el mapeo de memoria y la interfaz que usan para mostrar informacion por consola. Esta guía explica cómo ejecutar cada entorno y que archivos seria necesario cambiar para adaptar el ejemplo.
 
